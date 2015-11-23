@@ -1,0 +1,146 @@
+#!/bin/bash
+############################################
+#
+# ██▓███   ▄▄▄       ██▀███   ██▓    ▓█████ 
+#▓██░  ██▒▒████▄    ▓██ ▒ ██▒▓██▒    ▓█   ▀ 
+#▓██░ ██▓▒▒██  ▀█▄  ▓██ ░▄█ ▒▒██░    ▒███   
+#▒██▄█▓▒ ▒░██▄▄▄▄██ ▒██▀▀█▄  ▒██░    ▒▓█  ▄ 
+#▒██▒ ░  ░ ▓█   ▓██▒░██▓ ▒██▒░██████▒░▒████▒
+#▒▓▒░ ░  ░ ▒▒   ▓▒█░░ ▒▓ ░▒▓░░ ▒░▓  ░░░ ▒░ ░
+#░▒ ░       ▒   ▒▒ ░  ░▒ ░ ▒░░ ░ ▒  ░ ░ ░  ░
+#░░         ░   ▒     ░░   ░   ░ ░      ░   
+#               ░  ░   ░         ░  ░   ░  ░
+##voxygen.fr #TextToSpeech #EfreiLinux #NaK
+#
+# Script de synthèse vocale - 2015 - NaK
+# 
+############################################
+
+#Détecte la présence de VLC (prérequis)
+if [ ! -e `which cvlc` ]; then
+	echo "Le paquet \"vlc\" doit être installé .. :("
+	exit
+fi 
+
+curr_voix="Fabienne"
+last_md5=""
+
+#Tableau associatif des voix et leur description
+declare -A vlist
+vlist["Agnes"]="Simple voix féminine"
+vlist["Becool"]="Doc Gynéco"
+vlist["Electra"]="Téléphone rose"
+vlist["Emma"]="Voix de petite fille"
+vlist["Fabienne"]="Voix féminine avec prononciation des mots complexes"
+vlist["Helene"]="Autre voix féminine"
+vlist["Loic"]="Voix masculine"
+vlist["Matteo"]="Voix de petit garcon tout mignon"
+vlist["Melodine"]="Chanteuse"
+vlist["Mendoo"]="Voix féminine africaine"
+vlist["Michel"]="Voix masculine avec prononciation des mots complexes"
+vlist["Moussa"]="Voix masculine africaine"
+vlist["Phillipe"]="Autre voix masculine"
+vlist["Sorciere"]="* Hocus Pocus *"
+
+function banner {
+echo -e "\033[31m ██▓███   ▄▄▄       ██▀███   ██▓    ▓█████ 
+▓██░  ██▒▒████▄    ▓██ ▒ ██▒▓██▒    ▓█   ▀ 
+▓██░ ██▓▒▒██  ▀█▄  ▓██ ░▄█ ▒▒██░    ▒███   
+▒██▄█▓▒ ▒░██▄▄▄▄██ ▒██▀▀█▄  ▒██░    ▒▓█  ▄ 
+▒██▒ ░  ░ ▓█   ▓██▒░██▓ ▒██▒░██████▒░▒████▒
+▒▓▒░ ░  ░ ▒▒   ▓▒█░░ ▒▓ ░▒▓░░ ▒░▓  ░░░ ▒░ ░
+░▒ ░       ▒   ▒▒ ░  ░▒ ░ ▒░░ ░ ▒  ░ ░ ░  ░
+░░         ░   ▒     ░░   ░   ░ ░      ░   
+               ░  ░   ░         ░  ░   ░  ░
+#voxygen.fr #TextToSpeech #EfreiLinux #NaK\033[0m\n"
+}
+
+function usage { #Aide non interactive
+banner
+	echo "Aide :"
+	printf "%-35s %-55s\n" "parle -h" "Affiche cette aide !"
+	printf "%-35s %-55s\n" "parle -i" "Interactif"
+	printf "%-35s %-55s\n" "parle -v [style]" "Change le style de voix. Affiche la liste des voix si aucun <style> défini"
+	printf "%-35s %-55s\n" "parle -v <style> [-s] \"phrase\"" "Prononce la phrase selon le <style> et sauvegarde le mp3 si -h est défini (guillemets nécessaires)"
+}
+
+function interactive_help { #aide interactive
+	echo "Liste des comamndes :"
+	printf "%-10s => %-55s\n" $(echo -e "\033[31m/h\033[0m")"[elp]" "Affiche ce menu..."
+	printf "%-10s => %-55s\n" $(echo -e "\033[31m/s\033[0m")"[ave]" "Sauvegarde le dernier son"
+	printf "%-10s => %-55s\n" $(echo -e "\033[31m/v\033[0m")"[oix] [<nom>]" "Change le style de voix. Affiche la liste des voix si aucun <nom>."
+	printf "%-10s => %-55s\n" $(echo -e "\033[31m/q\033[0m")"[uit]" "Quitte"
+}
+
+function save { #Sauvegarde le dernier son.
+	if [[ -e /tmp/out.mp3 && "$last_md5" ]]; then
+		cp /tmp/out.mp3 ~/"$last_md5".mp3 && echo "Sauvegardé dans : ~/$last_md5.mp3"
+	fi
+}
+
+function set_prompt { #change le prompt interactif
+	PROMPT="\033[31m$curr_voix\033[0m>"
+}
+
+function liste_voix { #Affiche le tableau associatif
+	for i in ${!vlist[@]}; do
+		printf "%-10s => %-55s\n" "$i" "${vlist[$i]}"
+	done
+}
+
+function change_voix { #change la voix courante si elle existe, affiche la liste autrement
+	[ "${vlist["${1^}"]}" ] && curr_voix="${1^}" && return
+	liste_voix
+}
+
+function command { #gère les comamndes "/X" de l'interface interactive
+	case "$1" in
+		"h" | "help")
+			interactive_help;;
+		"q" | "quit")
+			exit;;
+		"s" | "save")
+			save;;
+		"v" | "voix")
+		if [[ "$2" && ${vlist["${2^}"]} ]]; then #détecte le changement de voix
+			curr_voix="${2^}"
+			set_prompt
+		else
+			liste_voix
+		fi;;
+	esac
+}
+
+function parle { #No comment
+	[ "$1" ] && curl -G 'https://www.voxygen.fr/sites/all/modules/voxygen_voices/assets/proxy/index.php?method=redirect&ts=1448064835057' -H 'Host: www.voxygen.fr' -H 'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20100101 Firefox/29.0' -H 'Accept: audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,application/ogg;q=0.7,video/*;q=0.6,*/*;q=0.5' -H 'Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3' -H 'DNT: 1' -H 'Range: bytes=0-' -H 'Referer: https://www.voxygen.fr/' -H 'Cookie: has_js=1' -H 'Connection: keep-alive' --data-urlencode "text=$1" --data-urlencode "voice=$curr_voix" -sL | tee /tmp/out.mp3 | cvlc --play-and-exit - 2> /dev/null
+	last_md5=$(echo $1 | md5sum | cut -f1 -d" ")
+}
+
+function interactive { #Interface interactive
+clear
+set_prompt
+banner
+interactive_help
+
+while [ 1 ]; do
+	read -p "$(echo -e "$PROMPT") " input #Prend l'input et gère le prompt
+
+	if [[ "$input" && ${input::1} == "/" ]]; then	#détecte les commandes "/X"
+		command ${input:1}
+	else
+		[ "$input" ] && parle "$input"
+	fi
+done
+
+}
+
+# FONCTION PRINCIPALE
+if [ $# -gt 0 ]; then
+	[ "$1" == "-h" ] && usage && exit
+	[ "$1" == "-i" ] && interactive && exit
+	[[ "$1" == "-v" && ! "$2" ]] && liste_voix && exit
+	[[ "$1" == "-v" && "$2" ]] && change_voix $2
+	[[ "$3" == "-s" && "$4" ]] && parle "$4" && save && exit
+	[ "$3" != "-s" ] && parle "$3" && exit
+fi
+usage
