@@ -41,6 +41,18 @@ vlist["Michel"]="Voix masculine avec prononciation des mots complexes"
 vlist["Moussa"]="Voix masculine africaine"
 vlist["Phillipe"]="Autre voix masculine"
 vlist["Sorciere"]="* Hocus Pocus *"
+vlist["Adel"]="Voix Arabe"
+vlist["Matthias"]="Voix Allemande masculine"
+vlist["Sylvias"]="Voix Allemande féminine"
+vlist["Bronwen"]="* Voix Anglaise féminine 1"
+vlist["Elizabeth"]="Voix Anglaise féminine 2"
+vlist["Judith"]="Voix Anglaise féminine 3"
+vlist["Witch"]="Sorcière Anglais"
+vlist["Paul"]="Voix Anglaise masculine"
+vlist["Amanda"]="Voix US féminine"
+vlist["Phil"]="Voix US masculine"
+vlist["Martha"]="Voix Espagnole féminine"
+vlist["Sonia"]="Voix Italienne féminine"
 
 function banner {
 echo -e "\033[31m ██▓███   ▄▄▄       ██▀███   ██▓    ▓█████ 
